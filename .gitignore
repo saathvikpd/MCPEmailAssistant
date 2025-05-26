@@ -1,0 +1,14 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Client credentials file
+client_secret_396371009840-fqddcngmeu6m5cp0j6l1qe3t9s4jgkih.apps.googleusercontent.com.json
+token.json
