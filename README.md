@@ -46,7 +46,7 @@ In your Claude Desktop configuration file:
         "google-auth-oauthlib",
         "mcp",
         "run",
-        "/absolute/path/to/your/project/emailassistant/main.py"
+        "/absolute/path/to/your/project/MCPEmailAssistant/main.py"
       ]
     }
   }
