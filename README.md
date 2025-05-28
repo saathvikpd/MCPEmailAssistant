@@ -18,16 +18,24 @@ EmailAssistant is an MCP-compatible server that integrates with the Gmail API to
 
 ## 🔧 Configuration Summary
 
-### 🔁 Replace These in `config.py`
+### 🔁 Create `config.py` with these contents:
 
-- Replace `/absolute/path/to/your/project` with the **full path to your local EmailAssistant project directory**.
-- Replace `"your_client_secret_file.json"` with the **exact filename** of your downloaded OAuth credentials from Google Cloud.
+```python
+import os
+
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+PROJECT_DIR = "/absolute/path/to/your/project/directory/"
+CREDENTIALS_FP = os.path.join(PROJECT_DIR, "client_secret_XXXXX.json")
+TOKEN_FP = os.path.join(PROJECT_DIR, "token.json")
+```
+
+Note: Make sure to replace the placeholders in the above code---PROJECT_DIR & CREDENTIALS_FP
 
 ---
 
 ### 🖥️ 3. Claude Desktop Configuration
 
-In your Claude Desktop configuration file:
+In your Claude Desktop configuration file (can find it in Developer Settings):
 
 ```json
 {
@@ -39,6 +47,8 @@ In your Claude Desktop configuration file:
         "--with",
         "mcp[cli]",
         "--with",
+        "yake",
+        "--with",
         "google-api-python-client",
         "--with",
         "google-auth-httplib2",
@@ -46,7 +56,7 @@ In your Claude Desktop configuration file:
         "google-auth-oauthlib",
         "mcp",
         "run",
-        "/absolute/path/to/your/project/MCPEmailAssistant/main.py"
+        "/absolute/path/to/your/project/directory/main.py"
       ]
     }
   }
@@ -65,6 +75,8 @@ Once configured:
 get_email_summary(time="newer_than:1d")
 get_top_matching_email(query_keywords="project deadline")
 ```
+
+4. All you need to do is ask Claude in plain english about your inbox
 
 ## 📌 Requirements
 
