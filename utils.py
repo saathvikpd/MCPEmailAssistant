@@ -5,6 +5,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from yake import KeywordExtractor
 import os
 
 
@@ -21,9 +22,11 @@ class EmailAssistant:
         self.token_fp = token_fp
         self.scopes = scopes
         self.service = None
-        self.get_credentials()
+        self.messages = None
+        self.kw_extractor = None
+        self._get_credentials()
 
-    def get_credentials(self):
+    def _get_credentials(self):
 
         if os.path.exists(self.token_fp):
             creds = Credentials.from_authorized_user_file(self.token_fp, self.scopes)
@@ -41,6 +44,21 @@ class EmailAssistant:
                 token.write(creds.to_json())
 
         self.service = build("gmail", "v1", credentials=creds)
+    
+    def _get_keywords(self, text, top_n = 10):
+
+        if not self.kw_extractor:
+            self.kw_extractor = KeywordExtractor()
+
+        keywords = self.kw_extractor.extract_keywords(text)
+
+        output = []
+        for i, kw in enumerate(keywords):
+            output += [kw[0]]
+            if i < top_n:
+                break
+        
+        return"Keyword: " + ",".join(output)
 
 
     def _get_subject_and_sender(payload_headers):
@@ -51,6 +69,8 @@ class EmailAssistant:
             elif header["name"] == "From":
                 sender = header["value"]
         return subject, sender
+    
+    
 
     def get_email_summary(self, query) -> str:
         """
@@ -63,26 +83,26 @@ class EmailAssistant:
         newer_than:1y would find emails newer than one year. 
         """
         try:
+            if not self.messages:
+                self.messages = self.service.users().messages()
 
-            results = self.service.users().messages().list(userId="me", q=query).execute()
+            results = self.messages.list(userId="me", q=query).execute()
             messages = results.get("messages", [])
 
             if not messages:
-                print("No recent messages found.")
-                return
+                return {"error": "No matching emails found."}
 
-            print(f"Found {len(messages)} message(s) from the last 24 hours:\n")
-
-            build_output = ""
+            output = ""
             for msg in messages:
                 msg_id = msg["id"]
-                msg_detail = self.service.users().messages().get(userId="me", id=msg_id, format="metadata", metadataHeaders=["Subject", "From"]).execute()
+                msg_detail = self.messages.get(userId="me", id=msg_id, format="metadata", metadataHeaders=["Subject", "From"]).execute()
                 headers = msg_detail["payload"]["headers"]
                 snippet = msg_detail.get("snippet", "")
+                keyword_summary = self._get_keywords(snippet)
                 subject, sender = EmailAssistant._get_subject_and_sender(headers)
-                build_output += f"From: {sender}\nSubject: {subject}\nSnippet: {snippet}\n" + "-" * 40
+                output += f"From: {sender}\nSubject: {subject}\nYAKEKeywords: {keyword_summary}\nEND\n"
             
-            return build_output
+            return output
 
         except Exception as e:
             return {"error": str(e)}
@@ -94,19 +114,19 @@ class EmailAssistant:
         """
 
         try:
-            # Construct search query
+            if not self.messages:
+                self.messages = self.service.users().messages()
+
             query = f"{query_keywords} in:inbox"
 
-            # Fetch matching message IDs
-            results = self.service.users().messages().list(userId='me', q=query, maxResults=1).execute()
+            results = self.messages.list(userId='me', q=query, maxResults=1).execute()
             messages = results.get('messages', [])
 
             if not messages:
                 return {"error": "No matching emails found."}
 
-            # Get the top result
             msg_id = messages[0]['id']
-            msg = self.service.users().messages().get(userId='me', id=msg_id, format='metadata', metadataHeaders=['From', 'Subject', 'Date']).execute()
+            msg = self.messages.get(userId='me', id=msg_id, format='metadata', metadataHeaders=['From', 'Subject', 'Date']).execute()
 
             headers = msg['payload']['headers']
             msg_info = {h['name'].lower(): h['value'] for h in headers}
